@@ -1,5 +1,6 @@
 //import
 const express = require('express');
+const bodyParser = require('body-parser');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
 const bcrypt = require('bcrypt')
@@ -8,12 +9,13 @@ const bcrypt = require('bcrypt')
 const app = new express();
 app.use(express.json());
 app.use(cors());
+app.use(bodyParser.json());
 
 const client = new MongoClient('mongodb+srv://adminB:adminB@cluster0.mozznvh.mongodb.net/?retryWrites=true&w=majority&appName=cluster0');
 client.connect();
 const db = client.db('bus_reservation');
 const col = db.collection('details');
-
+const col2 =db.collection('customerdetails');
 
 
 app.get('/home',(req,res)=>{
@@ -32,7 +34,7 @@ app.post('/check',async(req,res)=>{
     const result1 = await col.findOne({'name':req.body.un}); 
     
     if(result1.password == req.body.pw){ 
-        res.send("Login Success") 
+        res.send({ success: true, redirectUrl: '/Boo' }) 
  
     } 
     else{ 
@@ -69,6 +71,23 @@ app.post('/update',async(req,res)=>{
 
 
 
+  // Endpoint to insert payment and ticket details
+app.post('/api/payment', async (req, res) => {
+    const { paymentDetails, ticketDetails } = req.body;
+  
+    try {
+      // Combine payment and ticket details into a single document
+      const document = { ...paymentDetails, ...ticketDetails };
+  
+      // Insert combined details into the collection
+      await col2.insertOne(document);
+  
+      res.status(200).send('Payment and ticket details inserted successfully');
+    } catch (error) {
+      console.error('Error inserting payment and ticket details:', error);
+      res.status(500).send('Internal server error');
+    }
+  });
 
 app.get('/showall',async(req,res)=>{
     const result = await col.find().toArray();
@@ -77,8 +96,19 @@ app.get('/showall',async(req,res)=>{
 
 
 
-
-
 app.listen(1234);
 console.log("Server Running....");
 
+app.post('/cancel',async(req,res)=>{
+    const result4 = await col2.findOne({'name':req.body.name});
+   
+    if(result4.name == req.body.name ){
+        if(result4.ticketNumber == req.body.ticketNumber ){
+            col2.deleteOne({ticketNumber:req.body.ticketNumber})
+        res.send("ticket cancelled")
+    }}
+        
+        else{
+        res.send("Failed")
+    }
+})
